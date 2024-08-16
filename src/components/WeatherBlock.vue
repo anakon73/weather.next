@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, toRefs } from 'vue'
 import { storeToRefs } from 'pinia'
 import CitiesSelect from './CitiesSelect.vue'
+import Dialog from './Dialog.vue'
 import type { City, Weather } from '@/types'
 import { useWeatherStore } from '@/store/WeatherStore'
 
@@ -24,6 +25,29 @@ const { favoriteCities } = storeToRefs(weatherStore)
 
 const week = ref(false)
 const isLoading = ref(false)
+const showRemoveModal = ref(false)
+const showFavoriteModal = ref(false)
+const showRemoveFavoriteModal = ref(false)
+
+function removeCity() {
+  emits('removeCity', selectedCity.value.id)
+  showRemoveModal.value = false
+}
+
+function toFavorite() {
+  if (favoriteCities.value.length === 5) {
+    showFavoriteModal.value = true
+  }
+  else {
+    weatherStore.addToFavorite(selectedCity.value)
+  }
+}
+
+function removeAndAddFavorite() {
+  weatherStore.removeFromFavorite(favoriteCities.value[4].id)
+  weatherStore.addToFavorite(selectedCity.value)
+  showFavoriteModal.value = false
+}
 
 async function getWeather(): Promise<Weather> {
   isLoading.value = true
@@ -93,6 +117,43 @@ const averageTempPerDay = computed(() => {
 </script>
 
 <template>
+  <Dialog :show="showRemoveModal" @close="showRemoveModal = false">
+    <div class="dialog_container">
+      <p>Are you sure to delete block</p>
+      <div class="dialog_buttons">
+        <button class="approve_button" @click="removeCity">
+          Yes
+        </button>
+        <button class="reject_button" @click="showRemoveModal = false">
+          No
+        </button>
+      </div>
+    </div>
+  </Dialog>
+  <Dialog :show="showFavoriteModal" @close="showFavoriteModal = false">
+    <p>If you want to add new city remove {{ favoriteCities[4].name }} because max length of favorite cities is 5</p>
+    <div class="dialog_fav_button">
+      <button @click="removeAndAddFavorite">
+        Remove
+      </button>
+      <button @click="showFavoriteModal = false">
+        Don't remove
+      </button>
+    </div>
+  </Dialog>
+  <Dialog :show="showRemoveFavoriteModal" @close="showRemoveFavoriteModal = false">
+    <div class="dialog_container">
+      <p>Are you sure to delete block</p>
+      <div class="dialog_buttons">
+        <button class="approve_button" @click="weatherStore.removeFromFavorite(selectedCity.id)">
+          Yes
+        </button>
+        <button class="reject_button" @click="showRemoveFavoriteModal = false">
+          No
+        </button>
+      </div>
+    </div>
+  </Dialog>
   <div class="wrapper">
     <div class="container">
       <div v-if="!fixed" class="selects_container">
@@ -103,18 +164,15 @@ const averageTempPerDay = computed(() => {
         <div class="buttons_container">
           <button
             class="to_favorite"
-            :disabled="
-              favoriteCities.length === 5
-                || favoriteCities.some(city => city.name === selectedCity.name)
-            "
-            @click="weatherStore.addToFavorite(selectedCity)"
+            :disabled="favoriteCities.some(city => city.name === selectedCity.name)"
+            @click="toFavorite"
           >
             To Favorite
           </button>
           <button
             class="remove"
             :disabled="!removable"
-            @click="emits('removeCity', selectedCity.id)"
+            @click="showRemoveModal = true"
           >
             Remove
           </button>
@@ -124,7 +182,7 @@ const averageTempPerDay = computed(() => {
         <p class="city_name">
           {{ selectedCity.name }}
         </p>
-        <button class="remove_favorite" @click="weatherStore.removeFromFavorite(selectedCity.id)">
+        <button class="remove_favorite" @click="showRemoveFavoriteModal = true">
           Remove
         </button>
       </div>
@@ -171,6 +229,55 @@ const averageTempPerDay = computed(() => {
 </template>
 
 <style scoped>
+.dialog_container{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dialog_container button {
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dialog_buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.dialog_fav_button {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.dialog_fav_button button {
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dialog_fav_button button:first-child {
+  background: red;
+}
+
+.dialog_fav_button button:last-child {
+  background: rgb(37 99 235);
+}
+
+.approve_button {
+  background: rgb(37 99 235);
+}
+
+.reject_button {
+  background-color: red;
+}
+
 .wrapper {
   border-radius: 8px;
 }
