@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, toRefs } from 'vue'
 import { storeToRefs } from 'pinia'
+import {
+  CategoryScale,
+  Chart,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+} from 'chart.js'
 import CitiesSelect from './CitiesSelect.vue'
 import Dialog from './Dialog.vue'
 import type { City, Weather } from '@/types'
@@ -16,6 +24,8 @@ const emits = defineEmits<{
   changeCity: [city: City]
   removeCity: [cityId: City['id']]
 }>()
+
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale)
 
 const { selectedCity } = toRefs(props)
 
@@ -63,9 +73,60 @@ async function getWeather(): Promise<Weather> {
 }
 
 const weatherData = ref<Weather | null>(null)
+const chartRef = ref<HTMLCanvasElement | null>(null)
 
 onMounted(async () => {
   weatherData.value = await getWeather()
+
+  if (chartRef.value) {
+    const ctx = chartRef.value.getContext('2d')
+
+    if (ctx) {
+      const labels = []
+      const data = []
+
+      for (let i = 0; i < 8; i++) {
+        labels.push(
+          new Date(weatherData.value!.list[i].dt_txt).toLocaleDateString('en-us', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            hour: 'numeric',
+          }),
+        )
+        data.push(weatherData.value!.list[i].main.temp)
+      }
+
+      // eslint-disable-next-line no-new
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Temperature',
+            data,
+            borderWidth: 1,
+            fill: false,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            tension: 0.4,
+          }],
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+            x: {
+              ticks: {
+                display: false,
+              },
+            },
+          },
+        },
+      })
+    }
+  }
 })
 
 const averageTempPerDay = computed(() => {
@@ -224,11 +285,26 @@ const averageTempPerDay = computed(() => {
           </div>
         </div>
       </div>
+      <canvas id="weatherChart" ref="chartRef" />
     </div>
   </div>
 </template>
 
 <style scoped>
+canvas {
+  height: 200px !important;
+  border: 1px solid deepskyblue;
+  width: 100% !important;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+@media (min-width: 500px) {
+  canvas {
+    height: 400px !important;
+  }
+}
+
 .dialog_container{
   display: flex;
   justify-content: space-between;
