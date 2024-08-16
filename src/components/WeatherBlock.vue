@@ -23,12 +23,17 @@ const weatherStore = useWeatherStore()
 const { favoriteCities } = storeToRefs(weatherStore)
 
 const week = ref(false)
+const isLoading = ref(false)
 
 async function getWeather(): Promise<Weather> {
+  isLoading.value = true
+
   const response = await fetch(`
   https://api.openweathermap.org/data/2.5/forecast?lat=${selectedCity.value.latitude}
 &lon=${selectedCity.value.longitude}&appid=c8abda6ffa7d4702e44bb8eff83c6c55&units=metric`,
   )
+
+  isLoading.value = false
 
   return response.json() as Promise<Weather>
 }
@@ -123,7 +128,10 @@ const averageTempPerDay = computed(() => {
           Remove
         </button>
       </div>
-      <div class="card_container">
+      <h2 v-if="isLoading">
+        Is Loading...
+      </h2>
+      <div v-else class="card_container">
         <div class="buttons">
           <button :class="{ active: !week }" @click="week = false">
             Today

@@ -7,18 +7,24 @@ import { idGenerator } from '@/utils'
 const ipData = ref<User>()
 const userCity = ref<RootCity | undefined>()
 const cities = ref<City[]>([])
+const isLoadingIp = ref(false)
+const isLoadingCity = ref(false)
 
 async function fetchIpData() {
+  isLoadingIp.value = true
   const response = await fetch('http://ip-api.com/json')
   ipData.value = await response.json() as User
+  isLoadingIp.value = false
 }
 
 async function fetchUserCity() {
   await fetchIpData()
+  isLoadingCity.value = true
   const response = await fetch(
     `https://api.thecompaniesapi.com/v1/locations/cities?search=${ipData.value?.city}`,
   )
   userCity.value = await response.json() as RootCity
+  isLoadingCity.value = false
 }
 
 function changeCity(e: City, prevCityId: number) {
@@ -51,7 +57,10 @@ watch(userCity, () => {
 </script>
 
 <template>
-  <Suspense class="blocks_list">
+  <h1 v-if="isLoadingCity || isLoadingIp">
+    isLoading...
+  </h1>
+  <Suspense v-else class="blocks_list">
     <WeatherBlock
       v-for="city in cities"
       :key="city.code"
